@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Forecaster</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.3); border-radius: 4px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.5); }
+    </style>
+
+    <!-- Import Maps for React and Libraries -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "recharts": "https://esm.sh/recharts@2.12.3?external=react,react-dom",
+        "lucide-react": "https://esm.sh/lucide-react@0.359.0?external=react"
+      }
+    }
+    </script>
+
+    <!-- Babel for In-Browser JSX/TSX Compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Application Code -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript">
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
+import { 
+  Plus, 
+  Trash2, 
+  TrendingUp, 
+  TrendingDown, 
+  Search, 
+  GripVertical,
+  ChevronRight,
+  ChevronLeft,
+  ShieldAlert,
+  LineChart as IconLineChart,
+  Layers,
+  SlidersHorizontal,
+  Info,
+  Sun,
+  Moon,
+  Contrast,
+  PieChart as IconPieChart,
+  DollarSign,
+  History
+} from 'lucide-react';
+import {
+  ComposedChart,
+  Area,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+
+// --- 1. WEB COMPONENT DEFINITION ---
+if (typeof window !== 'undefined' && !customElements.get('animated-icon-selector')) {
+  class AnimatedIconSelector extends HTMLElement {
+    static get observedAttributes() {
+      return [
+        'icon-height', 'border-radius', 'active-grow', 'inactive-grow',
+        'icon-bg', 'icon-bg-active', 'icon-color', 'stroke-width', 'stroke-color', 'active-text-color'
+      ];
+    }
+
+    _items = [];
+    _lastCheckedInput = null;
+    _radioGroupName = '';
+
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+      this._radioGroupName = `activity-selector-${Math.random().toString(36).substr(2, 9)}`;
+      if (this.shadowRoot) this.shadowRoot.innerHTML = this._getStyles();
+    }
+
+    _getStyles() {
+      return `
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Material+Icons+Outlined');
+          :host { display: block; container-type: inline-size; --icon-height: 40px; --border-radius: 6px; --gap: 4px; --stroke-width: 0px; --active-grow: 1.5; --inactive-grow: 1; --transition-speed: 0.3s; --ease-spring: cubic-bezier(0.5, 1.5, 0.75, 1.25); --ease-out: cubic-bezier(0, 0, 0.2, 1); --icon-bg: #2c313a; --icon-bg-active: #61afef; --icon-color: #abb2bf; --stroke-color: #fff; --active-text-color: #21252b; --icon-font-size-small: 20px; --text-font-size-small: 11px; }
+          .visually-hidden { position: absolute; opacity: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+          .icon-group { display: flex; gap: var(--gap); border: none; padding: 0; margin: 0; align-items: center; width: 100%; }
+          label { display: grid; place-content: center; height: var(--icon-height); border-radius: var(--border-radius); background-color: var(--icon-bg); color: var(--icon-color); cursor: pointer; flex-basis: 0; flex-grow: var(--inactive-grow); transition: flex-grow var(--transition-speed) var(--ease-spring), background-color var(--transition-speed) var(--ease-out), color 0.2s; user-select: none; border: 1px solid transparent; }
+          label:hover { border-color: #4b5263; }
+          label .material-icons-outlined { font-family: 'Material Icons Outlined', sans-serif; font-size: var(--icon-font-size-small); }
+          label:not(:has(.material-icons-outlined)) { font-size: var(--text-font-size-small); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-family: monospace; }
+          input[type="radio"]:checked + label { flex-grow: var(--active-grow); background-color: var(--icon-bg-active); color: var(--active-text-color); border-color: var(--icon-bg-active); }
+        </style>
+      `;
+    }
+
+    connectedCallback() {
+      this._updateStyles();
+      if (this._items.length > 0) this._renderItems();
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+      if (oldValue !== newValue) this.style.setProperty(`--${name}`, newValue);
+    }
+
+    _updateStyles() {
+      const attrs = AnimatedIconSelector.observedAttributes;
+      for (const attr of attrs) {
+        const value = this.getAttribute(attr);
+        if (value) this.style.setProperty(`--${attr}`, value);
+      }
+    }
+
+    set items(itemsArray) {
+      this._items = itemsArray;
+      this._renderItems();
+    }
+
+    get items() { return this._items; }
+
+    _renderItems() {
+      if (!this.shadowRoot) return;
+      const oldFieldset = this.shadowRoot.querySelector('.icon-group');
+      if (oldFieldset) oldFieldset.remove();
+
+      const fieldset = document.createElement('fieldset');
+      fieldset.classList.add('icon-group');
+      
+      this._items.forEach(item => {
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.id = `${this._radioGroupName}-${item.id}`;
+        input.name = this._radioGroupName;
+        input.value = item.id;
+        input.classList.add('visually-hidden');
+        if (item.selected) {
+          input.checked = true;
+          this._lastCheckedInput = input;
+        }
+
+        const label = document.createElement('label');
+        label.htmlFor = `${this._radioGroupName}-${item.id}`;
+        label.title = item.label;
+        label.innerHTML = item.content; 
+
+        fieldset.appendChild(input);
+        fieldset.appendChild(label);
+      });
+
+      this.shadowRoot.appendChild(fieldset);
+      this._attachListeners();
+    }
+
+    _attachListeners() {
+      if (!this.shadowRoot) return;
+      const fieldset = this.shadowRoot.querySelector('.icon-group');
+      if (!fieldset) return;
+      fieldset.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.addEventListener('click', (e) => this._handleClick(e.currentTarget));
+      });
+    }
+
+    _handleClick(clickedInput) {
+      if (clickedInput === this._lastCheckedInput) return;
+      this._lastCheckedInput = clickedInput;
+      this._items.forEach(item => item.selected = (item.id === clickedInput.value));
+      this.dispatchEvent(new CustomEvent('change', {
+        detail: { selectedId: clickedInput.value }
+      }));
+    }
+  }
+  customElements.define('animated-icon-selector', AnimatedIconSelector);
+}
+
+// --- GLOBAL SVG PATTERNS FOR HC MODE ---
+const SvgPatterns = () => (
+  <svg width="0" height="0" className="absolute pointer-events-none">
+    <defs>
+      <pattern id="pat-0" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <rect width="6" height="6" fill="#fff" />
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#000" strokeWidth="2" />
+      </pattern>
+      <pattern id="pat-1" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
+        <rect width="6" height="6" fill="#fff" />
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#000" strokeWidth="2" />
+      </pattern>
+      <pattern id="pat-2" patternUnits="userSpaceOnUse" width="6" height="6">
+        <rect width="6" height="6" fill="#fff" />
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#000" strokeWidth="1" />
+        <line x1="0" y1="0" x2="6" y2="0" stroke="#000" strokeWidth="1" />
+      </pattern>
+      <pattern id="pat-3" patternUnits="userSpaceOnUse" width="8" height="8">
+        <rect width="8" height="8" fill="#fff" />
+        <circle cx="4" cy="4" r="2" fill="#000" />
+      </pattern>
+      <pattern id="pat-4" patternUnits="userSpaceOnUse" width="6" height="6">
+        <rect width="6" height="6" fill="#fff" />
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#000" strokeWidth="2" />
+      </pattern>
+      <pattern id="pat-5" patternUnits="userSpaceOnUse" width="6" height="6">
+        <rect width="6" height="6" fill="#fff" />
+        <line x1="0" y1="0" x2="6" y2="0" stroke="#000" strokeWidth="2" />
+      </pattern>
+      <pattern id="pat-cash" patternUnits="userSpaceOnUse" width="4" height="4">
+        <rect width="4" height="4" fill="#fff" />
+        <circle cx="2" cy="2" r="0.5" fill="#000" />
+      </pattern>
+    </defs>
+  </svg>
+);
+
+// --- 2. THEME & DATA ---
+
+const DARK_THEME = {
+  mode: 'dark',
+  bg: '#21252b',
+  surface: '#282c34',
+  border: '#3b4048',
+  textMain: '#abb2bf',
+  textMuted: '#5c6370',
+  accentBlue: '#61afef',
+  accentGreen: '#98c379',
+  accentRed: '#e06c75',
+  accentYellow: '#e5c07b',
+  accentPurple: '#c678dd',
+  accentCyan: '#56b6c2',
+  inputBg: 'transparent', 
+};
+
+const LIGHT_THEME = {
+  mode: 'light',
+  bg: '#ffffff',
+  surface: '#f3f4f6',
+  border: '#e5e7eb',
+  textMain: '#202124',
+  textMuted: '#5f6368',
+  accentBlue: '#1a73e8',
+  accentGreen: '#188038',
+  accentRed: '#d93025',
+  accentYellow: '#f9ab00',
+  accentPurple: '#a142f4',
+  accentCyan: '#24c1e0',
+  inputBg: 'transparent',
+};
+
+const HC_THEME = {
+  mode: 'hc',
+  bg: '#ffffff',
+  surface: '#ffffff',
+  border: '#000000',
+  textMain: '#000000',
+  textMuted: '#000000',
+  accentBlue: '#000000',
+  accentGreen: '#000000',
+  accentRed: '#000000',
+  accentYellow: '#000000',
+  accentPurple: '#000000',
+  accentCyan: '#000000',
+  inputBg: 'transparent',
+};
+
+const CHART_COLORS = [
+  DARK_THEME.accentBlue, 
+  DARK_THEME.accentGreen, 
+  DARK_THEME.accentYellow, 
+  DARK_THEME.accentPurple, 
+  DARK_THEME.accentCyan, 
+  DARK_THEME.accentRed
+];
+
+const HISTORICAL_DATA = {
+  "meta": { "description": "Historical CAGR", "date": "November 2025" },
+  "market_indices": [ { "name": "NASDAQ Composite", "ticker": "^IXIC", "5y": 16.8, "10y": 17.5, "20y": 12.2 }, { "name": "Dow Jones Industrial Average", "ticker": "^DJI", "5y": 10.5, "10y": 11.2, "20y": 7.8 } ],
+  "popular_index_funds": [ { "ticker": "QQQ", "name": "Invesco QQQ", "10y": 19.6 }, { "ticker": "VOO", "name": "Vanguard S&P 500", "10y": 15.3 }, { "ticker": "SPY", "name": "SPDR S&P 500", "10y": 15.3 }, { "ticker": "IVV", "name": "iShares Core S&P 500", "10y": 15.3 }, { "ticker": "VUG", "name": "Vanguard Growth", "10y": 16.5 }, { "ticker": "VTI", "name": "Vanguard Total Market", "10y": 14.0 }, { "ticker": "VTV", "name": "Vanguard Value", "10y": 12.1 }, { "ticker": "VEA", "name": "Vanguard Developed", "10y": 6.8 }, { "ticker": "IWF", "name": "iShares Russell 1000 Growth", "10y": 16.6 }, { "ticker": "BND", "name": "Vanguard Total Bond", "10y": 1.8 } ],
+  "stocks": [ { "ticker": "NVDA", "company": "NVIDIA Corp", "10y": 69.2 }, { "ticker": "AAPL", "company": "Apple Inc.", "10y": 20.1 }, { "ticker": "MSFT", "company": "Microsoft Corp", "10y": 25.0 }, { "ticker": "GOOGL", "company": "Alphabet Inc.", "10y": 19.4 }, { "ticker": "AMZN", "company": "Amazon.com Inc.", "10y": 25.5 }, { "ticker": "AVGO", "company": "Broadcom Inc.", "10y": 41.5 }, { "ticker": "META", "company": "Meta Platforms", "10y": 20.8 }, { "ticker": "TSLA", "company": "Tesla Inc.", "10y": 33.5 }, { "ticker": "COST", "company": "Costco Wholesale", "10y": 21.2 }, { "ticker": "NFLX", "company": "Netflix Inc.", "10y": 26.5 }, { "ticker": "AMD", "company": "AMD", "10y": 46.4 }, { "ticker": "PEP", "company": "PepsiCo Inc.", "10y": 9.8 }, { "ticker": "LIN", "company": "Linde plc", "10y": 14.2 }, { "ticker": "AZN", "company": "AstraZeneca", "10y": 13.8 }, { "ticker": "CSCO", "company": "Cisco Systems", "10y": 10.5 }, { "ticker": "INTU", "company": "Intuit Inc.", "10y": 23.1 }, { "ticker": "TXN", "company": "Texas Instruments", "10y": 18.9 }, { "ticker": "AMGN", "company": "Amgen Inc.", "10y": 10.1 }, { "ticker": "ISRG", "company": "Intuitive Surgical", "10y": 24.3 }, { "ticker": "HON", "company": "Honeywell", "10y": 9.2 }, { "ticker": "BKNG", "company": "Booking Holdings", "10y": 16.9 }, { "ticker": "AMAT", "company": "Applied Materials", "10y": 26.5 }, { "ticker": "ADI", "company": "Analog Devices", "10y": 18.4 }, { "ticker": "ADP", "company": "ADP", "10y": 17.6 }, { "ticker": "GILD", "company": "Gilead Sciences", "10y": 3.1 }, { "ticker": "SBUX", "company": "Starbucks Corp", "10y": 11.8 }, { "ticker": "MDLZ", "company": "Mondelez", "10y": 10.1 }, { "ticker": "REGN", "company": "Regeneron", "10y": 15.8 }, { "ticker": "VRTX", "company": "Vertex Pharm", "10y": 18.9 }, { "ticker": "LRCX", "company": "Lam Research", "10y": 30.2 }, { "ticker": "KLAC", "company": "KLA Corp", "10y": 29.5 }, { "ticker": "SNPS", "company": "Synopsys Inc.", "10y": 28.7 }, { "ticker": "CDNS", "company": "Cadence Design", "10y": 31.4 }, { "ticker": "PANW", "company": "Palo Alto Networks", "10y": 22.8 }, { "ticker": "MELI", "company": "MercadoLibre", "10y": 25.6 }, { "ticker": "MU", "company": "Micron Tech", "10y": 16.2 }, { "ticker": "CSX", "company": "CSX Corp", "10y": 12.9 }, { "ticker": "MAR", "company": "Marriott Intl", "10y": 14.1 }, { "ticker": "PYPL", "company": "PayPal", "10y": 8.5 }, { "ticker": "ORLY", "company": "O'Reilly Auto", "10y": 18.3 }, { "ticker": "MNST", "company": "Monster Bev", "10y": 15.9 }, { "ticker": "PCAR", "company": "PACCAR Inc", "10y": 12.8 }, { "ticker": "AEP", "company": "American Electric", "10y": 8.5 }, { "ticker": "CTAS", "company": "Cintas Corp", "10y": 21.4 }, { "ticker": "NXPI", "company": "NXP Semi", "10y": 14.7 }, { "ticker": "DXCM", "company": "DexCom Inc.", "10y": 26.8 } ]
+};
+
+const INITIAL_STOCKS = [
+  { id: '1', ticker: 'VTI', price: 270, shares: 1851, growth: 14.0, defaultGrowth: 14.0, baseUpside: 21.4, baseDownside: -18.5, isCash: false, color: CHART_COLORS[0], patternId: 'pat-1' }, 
+  { id: '2', ticker: 'VOO', price: 450, shares: 1000, growth: 15.3, defaultGrowth: 15.3, baseUpside: 22.0, baseDownside: -15.0, isCash: false, color: CHART_COLORS[1], patternId: 'pat-0' }, 
+  { id: '3', ticker: 'CASH', price: 1, shares: 300000, growth: 0, defaultGrowth: 0, baseUpside: 0, baseDownside: 0, isCash: true, color: DARK_THEME.textMuted, patternId: 'pat-cash' }, 
+  { id: '4', ticker: 'TSLA', price: 180, shares: 500, growth: 33.5, defaultGrowth: 33.5, baseUpside: 46.9, baseDownside: -20.1, isCash: false, color: CHART_COLORS[2], patternId: 'pat-2' }, 
+];
+
+// --- 3. HELPERS & COMPONENTS ---
+const FormattedMoney = ({ value, color, className, forceFull = false }) => {
+  if (value === undefined || value === null) return null;
+  
+  let num = value;
+  let suffix = '';
+
+  if (!forceFull) {
+    if (Math.abs(value) >= 1000000) {
+        num = value / 1000000;
+        suffix = 'M';
+    } else if (Math.abs(value) >= 1000) {
+        num = value / 1000;
+        suffix = 'k';
+    }
+  }
+  
+  const parts = new Intl.NumberFormat('en-US', { 
+    maximumFractionDigits: suffix ? 2 : 0, 
+    minimumFractionDigits: 0 
+  }).formatToParts(num);
+  
+  const integerPart = parts.find(p => p.type === 'integer')?.value || '0';
+  const decimalPart = parts.find(p => p.type === 'fraction')?.value || '';
+  const decimalSeparator = parts.find(p => p.type === 'decimal')?.value || '.';
+  
+  let formattedMain = '';
+  if (forceFull) {
+      formattedMain = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+  } else {
+      formattedMain = integerPart;
+  }
+
+  return (
+    <span className={`font-mono inline-flex items-baseline ${className || ''}`} style={{ color }}>
+      <span style={{ fontSize: '0.5em', transform: 'translateY(-0.6em)', marginRight: '2px' }}>$</span>
+      <span>{formattedMain}</span>
+      {!forceFull && (decimalPart || suffix) && (
+        <span style={{ marginLeft: '1px' }}>
+           {decimalPart && `${decimalSeparator}${decimalPart}`}
+           {suffix}
+        </span>
+      )}
+    </span>
+  );
+};
+
+const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
+const ScrubInput = ({ 
+  value, 
+  onChange, 
+  step = 1, 
+  min = 0, 
+  max = undefined,
+  prefix = '',
+  suffix = '', 
+  color,
+  fractionDigits = 0,
+  isCurrency = false,
+  bg,
+  disabled = false,
+  textAlign = 'right',
+  className = ''
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  
+  const startX = useRef(0);
+  const startVal = useRef(0);
+  const hasMoved = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isScrubbing) return;
+      
+      if (Math.abs(e.clientX - startX.current) > 3) {
+        hasMoved.current = true;
+      }
+
+      if (hasMoved.current) {
+        document.body.style.cursor = 'ew-resize';
+        const delta = e.clientX - startX.current;
+        const change = Math.floor(delta) * step * 5; 
+        let newVal = Math.max(min, startVal.current + change);
+        if (max !== undefined) newVal = Math.min(max, newVal);
+        onChange(Number(newVal.toFixed(fractionDigits > 0 ? fractionDigits : 2)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isScrubbing) {
+        if (!hasMoved.current) {
+          setEditValue(value.toString());
+          setIsEditing(true);
+        }
+        setIsScrubbing(false);
+        document.body.style.cursor = 'default';
+      }
+    };
+
+    if (isScrubbing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isScrubbing, onChange, step, min, max, fractionDigits, value]);
+
+  const handleCommit = () => {
+    setIsEditing(false);
+    let num = parseFloat(editValue);
+    if (!isNaN(num)) {
+      num = Math.max(min, num);
+      if (max !== undefined) num = Math.min(max, num);
+      onChange(num);
+    }
+  };
+
+  const renderDisplay = () => {
+    if (isCurrency) return <FormattedMoney value={value} color={color} />;
+    return (
+      <span className="flex items-baseline">
+        {value.toFixed(fractionDigits)}
+        {suffix && <span style={{ marginLeft: '1px', verticalAlign: 'text-top' }}>{suffix}</span>}
+      </span>
+    );
+  };
+
+  const justifyContent = textAlign === 'left' ? 'justify-start' : textAlign === 'center' ? 'justify-center' : 'justify-end';
+
+  if (isEditing) {
+    return (
+      <div className={`flex ${justifyContent} items-center h-full w-full ${className}`}>
+        <input
+          autoFocus
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleCommit}
+          onKeyDown={(e) => e.key === 'Enter' && handleCommit()}
+          className={`w-full text-${textAlign} text-xs font-mono rounded px-1 outline-none border min-w-[40px]`}
+          style={{ backgroundColor: bg, color: color, borderColor: color }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className={`cursor-ew-resize select-none flex items-center ${justifyContent} font-mono rounded px-1 transition-colors whitespace-nowrap w-full ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}`}
+      style={{ backgroundColor: bg, color: color }}
+      onMouseDown={(e) => {
+        if (disabled) return;
+        setIsScrubbing(true);
+        startX.current = e.clientX;
+        startVal.current = value;
+        hasMoved.current = false;
+      }}
+      title={disabled ? "Value tied to inflation" : "Click to edit, Drag to scrub"}
+    >
+      {(!isCurrency && prefix) && <span style={{ verticalAlign: 'text-top', marginRight: '1px' }}>{prefix}</span>}
+      {renderDisplay()}
+    </div>
+  );
+};
+
+// --- 5. MAIN APP ---
+function HighDensityForecaster() {
+  const [themeMode, setThemeMode] = useState('dark');
+  const currentTheme = themeMode === 'dark' ? DARK_THEME : themeMode === 'light' ? LIGHT_THEME : HC_THEME;
+  
+  const chartColors = useMemo(() => [
+    currentTheme.accentBlue, 
+    currentTheme.accentGreen, 
+    currentTheme.accentYellow, 
+    currentTheme.accentPurple, 
+    currentTheme.accentCyan, 
+    currentTheme.accentRed
+  ], [currentTheme]);
+
+  const [leftWidth, setLeftWidth] = useState(25); 
+  const [rightWidth, setRightWidth] = useState(20);
+  const containerRef = useRef(null);
+  
+  const [isDraggingLeft, setIsDraggingLeft] = useState(false);
+  const [isDraggingRight, setIsDraggingRight] = useState(false);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+
+  const [stocks, setStocks] = useState(INITIAL_STOCKS);
+  const [hoveredSlice, setHoveredSlice] = useState(null); 
+  const [hoveredChartData, setHoveredChartData] = useState(null);
+  
+  useEffect(() => {
+    setStocks(prev => prev.map((s) => ({
+      ...s,
+      color: s.isCash ? currentTheme.textMuted : chartColors[parseInt(s.id, 10) % chartColors.length] || chartColors[0]
+    })));
+  }, [themeMode, chartColors, currentTheme]);
+
+  const [years, setYears] = useState(10);
+  const [monthlyContrib, setMonthlyContrib] = useState(0); 
+  const [inflationRate, setInflationRate] = useState(3.0); 
+  
+  const [upsideFactor, setUpsideFactor] = useState(0); 
+  const [downsideFactor, setDownsideFactor] = useState(0); 
+  
+  const [isAdding, setIsAdding] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+
+  // --- CACHING STATES & LOGIC ---
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedState, setLastSavedState] = useState(null);
+
+  const currentStateForCache = useMemo(() => ({
+      stocks: stocks.map(({ id, ticker, price, shares, growth, defaultGrowth, baseUpside, baseDownside, isCash, patternId }) => ({ id, ticker, price, shares, growth, defaultGrowth, baseUpside, baseDownside, isCash, patternId })),
+      years, monthlyContrib, inflationRate, upsideFactor, downsideFactor
+  }), [stocks, years, monthlyContrib, inflationRate, upsideFactor, downsideFactor]);
+  
+  const currentStateString = JSON.stringify(currentStateForCache);
+
+  useEffect(() => {
+     const cached = localStorage.getItem('portfolio_forecaster_cache');
+     const autosave = localStorage.getItem('portfolio_forecaster_autosave');
+     if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.stocks) setStocks(parsed.stocks);
+          if (parsed.years !== undefined) setYears(parsed.years);
+          if (parsed.monthlyContrib !== undefined) setMonthlyContrib(parsed.monthlyContrib);
+          if (parsed.inflationRate !== undefined) setInflationRate(parsed.inflationRate);
+          if (parsed.upsideFactor !== undefined) setUpsideFactor(parsed.upsideFactor);
+          if (parsed.downsideFactor !== undefined) setDownsideFactor(parsed.downsideFactor);
+          setLastSavedState(cached);
+        } catch (e) {
+           setLastSavedState(JSON.stringify(currentStateForCache));
+        }
+     } else {
+        setLastSavedState(JSON.stringify(currentStateForCache));
+     }
+     if (autosave === 'true') {
+        setIsAutoSaving(true);
+     }
+     setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+     if (!isLoaded || !lastSavedState) return;
+     
+     if (currentStateString !== lastSavedState) {
+        if (isAutoSaving) {
+           localStorage.setItem('portfolio_forecaster_cache', currentStateString);
+           setLastSavedState(currentStateString);
+        } else {
+           setHasUnsavedChanges(true);
+        }
+     } else {
+        setHasUnsavedChanges(false);
+     }
+  }, [currentStateString, lastSavedState, isAutoSaving, isLoaded]);
+
+  useEffect(() => {
+     const handleBeforeUnload = (e) => {
+        if (hasUnsavedChanges && !isAutoSaving) {
+           e.preventDefault();
+           e.returnValue = '';
+        }
+     };
+     window.addEventListener('beforeunload', handleBeforeUnload);
+     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, isAutoSaving]);
+
+  const saveToCache = () => {
+     localStorage.setItem('portfolio_forecaster_cache', currentStateString);
+     localStorage.setItem('portfolio_forecaster_autosave', 'true');
+     setIsAutoSaving(true);
+     setLastSavedState(currentStateString);
+     setHasUnsavedChanges(false);
+  };
+
+  const clearCache = () => {
+     localStorage.removeItem('portfolio_forecaster_cache');
+     localStorage.removeItem('portfolio_forecaster_autosave');
+     setIsAutoSaving(false);
+     setLastSavedState(currentStateString); 
+     setHasUnsavedChanges(false); 
+  };
+  // --- END CACHING LOGIC ---
+
+  const [viewMode, setViewMode] = useState('combined');
+  const selectorRef = useRef(null);
+
+  useEffect(() => {
+    if (selectorRef.current) {
+      selectorRef.current.items = [
+        { id: 'growth', label: 'Growth', content: 'GROWTH', selected: false },
+        { id: 'combined', label: 'Combined', content: 'BOTH', selected: true },
+        { id: 'risk', label: 'Risk', content: 'RISK', selected: false },
+      ];
+      const handleSelection = (e) => setViewMode(e.detail.selectedId);
+      selectorRef.current.addEventListener('change', handleSelection);
+      return () => selectorRef.current?.removeEventListener('change', handleSelection);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectorRef.current) {
+      selectorRef.current.setAttribute('icon-bg', currentTheme.surface);
+      selectorRef.current.setAttribute('icon-bg-active', themeMode === 'hc' ? '#000000' : currentTheme.accentBlue);
+      selectorRef.current.setAttribute('icon-color', currentTheme.textMain);
+      selectorRef.current.setAttribute('stroke-color', themeMode === 'dark' ? '#1e2127' : '#ffffff');
+      selectorRef.current.setAttribute('active-text-color', '#ffffff');
+    }
+  }, [currentTheme, themeMode]);
+
+  useEffect(() => {
+    const handleWindowResize = () => {
+      if (window.innerWidth < 875) {
+        setIsRightCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
+    handleWindowResize(); 
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, []);
+
+  const handleMouseMove = (e) => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const x = e.clientX - containerRect.left;
+      const widthPercent = (x / containerRect.width) * 100;
+      const containerPixelWidth = containerRect.width;
+
+      if (isDraggingLeft) {
+        const newLeftWidth = widthPercent;
+        const delta = newLeftWidth - leftWidth; 
+        if (!isRightCollapsed) {
+           let newRightWidth = rightWidth - delta;
+           const rightPixelWidth = (newRightWidth / 100) * containerPixelWidth;
+           if (rightPixelWidth < 215) {
+              setIsRightCollapsed(true);
+           } else {
+              setRightWidth(newRightWidth);
+           }
+        }
+        const leftPixelWidth = (widthPercent / 100) * containerPixelWidth;
+        if (isLeftCollapsed) {
+           if (leftPixelWidth > 100) { setIsLeftCollapsed(false); setLeftWidth(Math.max(widthPercent, 15)); }
+        } else {
+           if (leftPixelWidth < 150) { setIsLeftCollapsed(true); } 
+           else if (widthPercent > 10 && widthPercent < 80) { setLeftWidth(widthPercent); }
+        }
+      } else if (isDraggingRight) {
+        const rightEdgePercent = 100 - widthPercent;
+        const rightPixelWidth = (rightEdgePercent / 100) * containerPixelWidth;
+        if (isRightCollapsed) {
+            if (rightPixelWidth > 60) { setIsRightCollapsed(false); setRightWidth(Math.max(rightEdgePercent, 15)); }
+        } else {
+            if (rightPixelWidth < 180) { setIsRightCollapsed(true); } 
+            else if (rightEdgePercent > 10 && rightEdgePercent < 50) { setRightWidth(rightEdgePercent); }
+        }
+      }
+  };
+
+  const handleMouseUp = () => {
+      setIsDraggingLeft(false);
+      setIsDraggingRight(false);
+      document.body.style.cursor = 'default';
+  };
+
+  useEffect(() => {
+    if (isDraggingLeft || isDraggingRight) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingLeft, isDraggingRight, isRightCollapsed, isLeftCollapsed, leftWidth, rightWidth]);
+
+  useEffect(() => {
+    if (searchTerm.length < 1) { setSuggestions([]); return; }
+    const query = searchTerm.toLowerCase();
+    const allItems = [...HISTORICAL_DATA.stocks, ...HISTORICAL_DATA.popular_index_funds, ...HISTORICAL_DATA.market_indices];
+    const filtered = allItems.filter(item => item.ticker.toLowerCase().includes(query) || (item.company || item.name).toLowerCase().includes(query)).slice(0, 6);
+    setSuggestions(filtered);
+  }, [searchTerm]);
+
+  const chartData = useMemo(() => {
+    const data = [];
+    const currentYear = new Date().getFullYear();
+    const totalInitial = stocks.reduce((acc, s) => acc + (s.price * s.shares), 0);
+
+    for (let i = 0; i <= years; i++) {
+      const row = { year: currentYear + i };
+      let totalUpside = 0;
+      let totalDownside = 0;
+      const totalInvested = totalInitial + (monthlyContrib * 12 * i);
+
+      stocks.forEach(s => {
+        const principal = s.price * s.shares;
+        const upsideMultiplier = (1 + upsideFactor / 100);
+        const downsideMultiplier = (1 + downsideFactor / 100);
+        
+        const upsideRate = s.isCash ? (-inflationRate / 100) : (s.baseUpside / 100) * upsideMultiplier;
+        const downsideRate = s.isCash ? (-inflationRate / 100) : (s.baseDownside / 100) * downsideMultiplier;
+
+        const fvPrincipal = principal * Math.pow(1 + upsideRate, i);
+        const fvPrincipalDown = principal * Math.pow(1 + downsideRate, i);
+        
+        let fvContrib = 0;
+        let fvContribDown = 0;
+
+        if (monthlyContrib > 0 && i > 0) {
+          const weight = totalInitial > 0 ? principal / totalInitial : 0;
+          const monthlyAllocated = monthlyContrib * weight;
+          const mr = upsideRate / 12;
+          const mrDown = downsideRate / 12;
+          const months = i * 12;
+          
+          if (s.isCash) {
+             fvContrib = monthlyAllocated * ((Math.pow(1 + mr, months) - 1) / mr);
+             fvContribDown = monthlyAllocated * ((Math.pow(1 + mrDown, months) - 1) / mrDown);
+          } else {
+             fvContrib = monthlyAllocated * ((Math.pow(1 + mr, months) - 1) / mr);
+             fvContribDown = monthlyAllocated * ((Math.pow(1 + mrDown, months) - 1) / mrDown);
+          }
+        }
+        
+        const val = Math.round(fvPrincipal + fvContrib);
+        const valDown = Math.round(fvPrincipalDown + fvContribDown);
+        
+        row[s.ticker] = val;
+        totalUpside += val;
+        totalDownside += valDown;
+      });
+      
+      const w35Total = totalUpside * 0.035;
+      const w40Total = totalUpside * 0.040;
+
+      row.Total = totalUpside;
+      row.TotalDownside = totalDownside;
+      row.TotalPrincipal = totalInvested;
+      row.Income35 = w35Total; 
+      row.Income40 = w40Total; 
+      data.push(row);
+    }
+    return data;
+  }, [stocks, years, monthlyContrib, inflationRate, upsideFactor, downsideFactor]);
+
+  const currentVal = stocks.reduce((acc, s) => acc + (s.price * s.shares), 0);
+  const futureVal = chartData[chartData.length - 1]?.Total || 0;
+  
+  const gain = futureVal - currentVal - (monthlyContrib * 12 * years);
+  const gainPercent = currentVal > 0 ? (gain / (currentVal + (monthlyContrib * 12 * years))) * 100 : 0;
+
+  const addStock = (item) => {
+    const price = 100 + Math.random() * 400; 
+    const ticker = typeof item === 'string' ? item : (item.ticker || 'STOCK');
+    const growth = typeof item === 'object' ? (item['10y'] || 8.0) : 8.0;
+    
+    const baseUp = growth > 0 ? (growth * 1.4) : growth;
+    const baseDown = growth > 0 ? -(growth * 0.6) : growth;
+    
+    const nonCashCount = stocks.filter(s => !s.isCash).length;
+    
+    setStocks([...stocks, {
+      id: Math.random().toString(), 
+      ticker: ticker.toUpperCase(), 
+      price: price, 
+      shares: 10, 
+      growth: growth,
+      defaultGrowth: growth, 
+      baseUpside: baseUp,
+      baseDownside: baseDown,
+      isCash: false,
+      color: chartColors[stocks.length % chartColors.length],
+      patternId: `pat-${nonCashCount % 6}`
+    }]);
+    setIsAdding(false);
+    setSearchTerm('');
+    setSuggestions([]);
+  };
+
+  const addCash = () => {
+    setStocks([...stocks, {
+      id: Math.random().toString(), 
+      ticker: "CASH", 
+      price: 1, 
+      shares: 10000, 
+      growth: 0, 
+      defaultGrowth: 0,
+      baseUpside: 0,
+      baseDownside: 0,
+      isCash: true,
+      color: currentTheme.textMuted,
+      patternId: 'pat-cash'
+    }]);
+    setIsAdding(false);
+  }
+
+  const toggleRightPanel = () => {
+    if (isRightCollapsed) {
+      setIsRightCollapsed(false);
+      if (window.innerWidth < 1280) {
+        setIsLeftCollapsed(true);
+      }
+      if (rightWidth < 20) {
+        setRightWidth(30);
+      }
+    } else {
+      setIsRightCollapsed(true);
+    }
+  };
+
+  const pieData = useMemo(() => {
+    return stocks.map(s => ({ 
+      name: s.ticker, 
+      value: s.price * s.shares, 
+      color: s.color,
+      patternId: s.patternId 
+    }));
+  }, [stocks]);
+  
+  const overlayData = hoveredChartData || chartData[chartData.length - 1];
+
+  return (
+    <div className="h-screen w-screen flex flex-col font-sans overflow-hidden" style={{ backgroundColor: currentTheme.bg, color: currentTheme.textMain }}>
+      <SvgPatterns />
+      <div ref={containerRef} className="flex-1 flex w-full h-full relative">
+        
+        {/* --- LEFT PANEL: HOLDINGS --- */}
+        <div 
+          style={{ 
+            width: isLeftCollapsed ? '40px' : `${leftWidth}%`,
+            minWidth: isLeftCollapsed ? '40px' : '280px', 
+            borderColor: currentTheme.border,
+            backgroundColor: currentTheme.bg
+          }} 
+          className={`flex flex-col h-full relative shrink-0 ${!isDraggingLeft ? 'transition-all duration-300 ease-in-out' : ''}`}
+        >
+          {/* Collapsed View */}
+          <div 
+             className={`absolute inset-0 w-10 flex flex-col items-center py-4 cursor-pointer transition-opacity duration-300 z-10 ${isLeftCollapsed ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+             onClick={() => setIsLeftCollapsed(false)}
+             style={{ backgroundColor: currentTheme.bg }}
+           >
+             <Layers className="w-4 h-4 mb-4" style={{ color: currentTheme.textMuted }} />
+             <div className="[writing-mode:vertical-lr] text-[10px] font-mono uppercase tracking-wider whitespace-nowrap flex items-center gap-4" style={{ color: currentTheme.textMuted }}>
+               <span>{stocks.length} Units</span>
+               <span className="font-bold" style={{ color: currentTheme.textMain }}>Holdings</span>
+             </div>
+             <ChevronRight className="w-4 h-4 mt-4" style={{ color: currentTheme.textMuted }} />
+           </div>
+
+          {/* Expanded View */}
+          <div className={`flex flex-col h-full w-full transition-opacity duration-300 ${isLeftCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className="h-10 flex items-center justify-between px-4 border-b shrink-0" style={{ borderColor: currentTheme.border, backgroundColor: currentTheme.bg }}>
+               <div className="text-[10px] font-mono uppercase tracking-wider font-bold flex items-center gap-2" style={{ color: currentTheme.textMuted }}>
+                  <Layers className="w-3 h-3" /> Holdings
+               </div>
+               <div className="flex items-center gap-2">
+                  <div className="text-[10px] font-mono" style={{ color: currentTheme.textMuted }}>{stocks.length} Units</div>
+                  <ChevronLeft className="w-3 h-3 hover:opacity-100 opacity-60 cursor-pointer" style={{ color: currentTheme.textMuted }} onClick={() => setIsLeftCollapsed(true)} />
+               </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ backgroundColor: currentTheme.bg }}>
+
+              {stocks.map(s => {
+                const isModifiedRate = s.growth !== s.defaultGrowth && !s.isCash;
+                const rateColor = s.isCash 
+                    ? currentTheme.accentRed 
+                    : s.growth >= 0 ? currentTheme.accentGreen : currentTheme.accentRed;
+
+                return (
+                  <div key={s.id} className="flex flex-col px-3 py-3 border-b group hover:brightness-110 transition-colors w-full" style={{ borderColor: currentTheme.surface, backgroundColor: currentTheme.bg }}>
+                    
+                    {/* Line 1: Symbol (Left) -- Total Value & Actions (Right) */}
+                    <div className="flex justify-between items-center mb-1.5 w-full relative">
+                       {/* Left: Symbol */}
+                       <div className="font-bold tracking-tight flex items-center gap-2 text-left min-w-0 mr-2 flex-1">
+                          <svg className={`w-3 h-3 shrink-0 rounded-full overflow-hidden ${themeMode === 'hc' ? 'border border-black' : ''}`} viewBox="0 0 12 12">
+                             <circle cx="6" cy="6" r="6" fill={themeMode === 'hc' ? `url(#${s.patternId})` : s.color} />
+                          </svg>
+                          <span style={{ color: currentTheme.textMain }} className="truncate" title={s.ticker}>{s.ticker}</span>
+                       </div>
+                       
+                       {/* Right: Value + Actions Container */}
+                       <div className="flex items-center justify-end">
+                          <ScrubInput 
+                             value={s.price * s.shares} 
+                             onChange={(val) => {
+                                const newShares = s.price > 0 ? val / s.price : 0;
+                                setStocks(stocks.map(st => st.id === s.id ? {...st, shares: newShares} : st));
+                             }}
+                             step={100}
+                             prefix="$"
+                             fractionDigits={0}
+                             isCurrency={true}
+                             color={currentTheme.textMain}
+                             bg="transparent"
+                             textAlign="right"
+                             className="whitespace-nowrap"
+                          />
+                          
+                          {/* Trash Action */}
+                          <div className="flex items-center justify-end overflow-hidden max-w-0 group-hover:max-w-[24px] opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+                             <button 
+                               onClick={() => setStocks(stocks.filter(k => k.id !== s.id))} 
+                               className="p-0.5 rounded transition-opacity ml-1 hover:bg-black/10 dark:hover:bg-white/10"
+                               style={{ color: currentTheme.accentRed }}
+                             >
+                               <Trash2 className="w-3.5 h-3.5" />
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Line 2: Price | Qty | Rate */}
+                    <div className="flex items-center gap-4 text-xs opacity-70 w-full">
+                       <div className="flex items-center gap-1.5 min-w-0">
+                          <ScrubInput 
+                              value={s.price}
+                              onChange={(val) => setStocks(stocks.map(st => st.id === s.id ? {...st, price: val} : st))}
+                              step={1}
+                              prefix="$"
+                              fractionDigits={0} 
+                              color={currentTheme.textMuted}
+                              bg="transparent"
+                              textAlign="left"
+                          />
+                       </div>
+
+                       <div className="flex items-center gap-0.5 min-w-0">
+                          <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: currentTheme.textMuted }}>#</span>
+                          <ScrubInput 
+                              value={s.shares} 
+                              onChange={(val) => setStocks(stocks.map(st => st.id === s.id ? {...st, shares: val} : st))}
+                              step={1}
+                              fractionDigits={0}
+                              color={currentTheme.textMuted}
+                              bg="transparent"
+                              textAlign="left"
+                          />
+                       </div>
+
+                       <div 
+                          className="flex items-center gap-1.5 ml-auto"
+                          title={!s.isCash ? "Average expected growth rate prefilled with the average for this stock for the last 10 years" : undefined}
+                       >
+                          {s.isCash ? (
+                             <TrendingDown className="w-3 h-3" style={{ color: currentTheme.accentRed }} />
+                          ) : (
+                             <TrendingUp className="w-3 h-3" style={{ color: currentTheme.textMuted }} />
+                          )}
+                          
+                          {s.isCash ? (
+                             <span className="font-mono" style={{ color: currentTheme.accentRed }}>-{inflationRate}%</span>
+                          ) : (
+                            <ScrubInput 
+                              value={s.growth} 
+                              onChange={(val) => setStocks(stocks.map(st => st.id === s.id ? {...st, growth: val} : st))}
+                              suffix="%"
+                              color={rateColor}
+                              bg="transparent"
+                              step={0.5}
+                              fractionDigits={1}
+                              textAlign="left"
+                            />
+                          )}
+
+                          {isModifiedRate && (
+                            <button 
+                              className="transition-colors p-0.5 ml-1"
+                              style={{ color: themeMode === 'dark' ? '#fff' : currentTheme.textMain }}
+                              title="Reset to historical rate"
+                              onClick={() => setStocks(stocks.map(st => st.id === s.id ? {...st, growth: st.defaultGrowth || 10} : st))}
+                            >
+                              <History className="w-3 h-3" />
+                            </button>
+                          )}
+                       </div>
+                    </div>
+
+                  </div>
+                );
+              })}
+
+              {/* Add Position Form */}
+              {isAdding ? (
+                <div className="p-3 border-b" style={{ borderColor: currentTheme.border, backgroundColor: currentTheme.surface }}>
+                   <div className="flex items-center gap-2 mb-3 relative">
+                      <Search className="w-3 h-3" style={{ color: currentTheme.textMuted }} />
+                      <input 
+                        autoFocus
+                        placeholder="Search Ticker (e.g. NVDA, QQQ)" 
+                        className="bg-transparent text-xs font-bold uppercase outline-none w-full font-mono"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ color: currentTheme.textMain }}
+                      />
+                      {suggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 border rounded-md shadow-xl z-50 overflow-hidden" style={{ backgroundColor: currentTheme.bg, borderColor: currentTheme.border }}>
+                          {suggestions.map((item, i) => (
+                            <div 
+                              key={i}
+                              className="px-3 py-2 text-xs cursor-pointer hover:brightness-90 flex justify-between items-center border-b last:border-0"
+                              style={{ borderColor: currentTheme.surface, backgroundColor: currentTheme.inputBg }}
+                              onClick={() => addStock(item)}
+                            >
+                              <div>
+                                <span className="font-bold mr-2" style={{ color: currentTheme.accentBlue }}>{item.ticker}</span>
+                                <span style={{ color: currentTheme.textMuted }}>{item.company || item.name}</span>
+                              </div>
+                              <div className="font-mono" style={{ color: currentTheme.accentGreen }}>
+                                {item['10y']}% <span className="text-[9px]" style={{ color: currentTheme.textMuted }}>10Y</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                   </div>
+                   <div className="flex justify-between items-center text-[10px]">
+                      <button onClick={() => setIsAdding(false)} className="hover:underline ml-auto" style={{ color: currentTheme.accentRed }}>CANCEL</button>
+                   </div>
+                </div>
+              ) : (
+                <div className="flex">
+                  <button 
+                    onClick={() => setIsAdding(true)} 
+                    className="flex-1 py-3 text-[10px] flex items-center justify-center gap-1 border-b uppercase tracking-wider font-medium hover:brightness-90 border-r"
+                    style={{ borderColor: currentTheme.border, color: currentTheme.textMuted, backgroundColor: currentTheme.bg }}
+                  >
+                    <Plus className="w-3 h-3" /> Add Position
+                  </button>
+                  <button 
+                    onClick={addCash} 
+                    className="w-20 py-3 text-[10px] flex items-center justify-center gap-1 border-b uppercase tracking-wider font-medium hover:brightness-90"
+                    style={{ borderColor: currentTheme.border, color: currentTheme.textMuted, backgroundColor: currentTheme.bg }}
+                  >
+                    <DollarSign className="w-3 h-3" /> Cash
+                  </button>
+                </div>
+              )}
+
+              {/* PIE CHART SECTION */}
+              <div className="h-[200px] w-full relative" style={{ borderColor: currentTheme.border }}>
+                 <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={2}
+                        dataKey="value"
+                        stroke="none"
+                        onMouseEnter={(_, index) => setHoveredSlice(pieData[index])}
+                        onMouseLeave={() => setHoveredSlice(null)}
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell 
+                             key={`cell-${index}`} 
+                             fill={themeMode === 'hc' ? `url(#${entry.patternId})` : entry.color} 
+                             stroke={themeMode === 'hc' ? '#000' : 'none'} 
+                             strokeWidth={themeMode === 'hc' ? 1 : 0}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                 </ResponsiveContainer>
+                 {/* INTERACTIVE PIE CENTER */}
+                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-all duration-300">
+                    <span className="text-[10px] opacity-70" style={{ color: currentTheme.textMuted }}>
+                        {hoveredSlice ? hoveredSlice.name : "Principal"}
+                    </span>
+                    <div className="font-bold text-sm" style={{ color: currentTheme.textMain }}>
+                        {hoveredSlice 
+                            ? <span style={{ fontSize: '1em', verticalAlign: 'baseline' }}>{((hoveredSlice.value / currentVal) * 100).toFixed(0)}<span style={{ marginLeft: '1px' }}>%</span></span>
+                            : <FormattedMoney value={currentVal} />
+                        }
+                    </div>
+                 </div>
+              </div>
+
+              {/* Optional footer spacing */}
+              <div className="h-4"></div>
+            </div>
+
+            {/* CACHE FOOTER */}
+            {(hasUnsavedChanges || isAutoSaving) && (
+              <div className="shrink-0 p-3 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] border-t" style={{ backgroundColor: currentTheme.surface, borderColor: currentTheme.border }}>
+                {(hasUnsavedChanges && !isAutoSaving) && (
+                   <button 
+                     onClick={saveToCache} 
+                     className="w-full py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all hover:opacity-80"
+                     style={{ backgroundColor: currentTheme.accentBlue, color: '#fff' }}
+                   >
+                     Save Changes in Cache
+                   </button>
+                )}
+                {isAutoSaving && (
+                   <button 
+                     onClick={clearCache} 
+                     className="w-full py-1 text-[10px] underline-offset-2 transition-all hover:underline opacity-70 hover:opacity-100"
+                     style={{ color: currentTheme.textMuted }}
+                   >
+                     Clear Cache
+                   </button>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* Left Resizer */}
+        <div 
+          onMouseDown={() => setIsDraggingLeft(true)}
+          className={`w-1 cursor-col-resize transition-colors z-20 flex items-center justify-center group shrink-0 ${isLeftCollapsed ? 'hidden' : ''}`}
+          style={{ backgroundColor: currentTheme.bg }}
+        >
+           <GripVertical className="w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: currentTheme.border }} />
+        </div>
+
+        {/* --- CENTER PANEL: CHART --- */}
+        <div className="flex-1 flex flex-col h-full min-w-[300px]" style={{ backgroundColor: currentTheme.bg, borderLeft: `1px solid ${currentTheme.border}`, borderRight: `1px solid ${currentTheme.border}` }}>
+          <div className="h-10 border-b flex items-center justify-between px-4 shrink-0" style={{ borderColor: currentTheme.border }}>
+             <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase" style={{ color: currentTheme.textMuted }}>Projection</span>
+             </div>
+             <div className="flex gap-4 items-center">
+                {/* Theme Toggle */}
+                <button 
+                  onClick={() => setThemeMode(m => m === 'dark' ? 'light' : m === 'light' ? 'hc' : 'dark')} 
+                  className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+                  title="Cycle Theme"
+                >
+                  {themeMode === 'dark' ? <Moon className="w-3 h-3" color={currentTheme.textMuted} /> : 
+                   themeMode === 'light' ? <Sun className="w-3 h-3" color={currentTheme.textMuted} /> : 
+                   <Contrast className="w-3 h-3" color={currentTheme.textMuted} />}
+                </button>
+                <div className="flex gap-4 text-[10px] font-mono" style={{ color: currentTheme.textMuted }}>
+                  <span>YRS: {years}</span>
+                  <span style={{ color: gain >= 0 ? (themeMode === 'hc' ? currentTheme.textMain : currentTheme.accentGreen) : (themeMode === 'hc' ? currentTheme.textMain : currentTheme.accentRed) }}>{gain >= 0 ? '+' : ''}{gainPercent.toFixed(1)}%</span>
+                </div>
+             </div>
+          </div>
+
+          <div className="flex-1 relative p-2 min-h-[200px]">
+            {/* STATIC OVERLAY COMPONENT */}
+            <div 
+               className="absolute top-4 left-4 z-10 p-4 border rounded-xl shadow-lg min-w-[220px] pointer-events-none transition-all duration-300" 
+               style={{ backgroundColor: currentTheme.surface, borderColor: currentTheme.border, opacity: 0.95 }}
+            >
+               <div className="flex items-baseline gap-2 mb-1">
+                 <span className="text-lg font-bold font-mono tracking-tighter" style={{ color: currentTheme.textMain }}>
+                    {overlayData ? overlayData.year : '...'}
+                 </span>
+                 <span className="text-[10px] font-mono font-bold tracking-wider uppercase" style={{ color: currentTheme.textMuted }}>
+                    FORECAST
+                 </span>
+               </div>
+
+               {/* Big Total */}
+               {overlayData && (
+                  <div className="mb-4">
+                     <FormattedMoney 
+                        value={overlayData.Total} 
+                        color={currentTheme.textMain} 
+                        className="text-3xl font-bold" 
+                        forceFull={true}
+                     />
+                  </div>
+               )}
+               
+               <div className="space-y-1.5 border-t pt-3" style={{ borderColor: currentTheme.border }}>
+                  {/* Holdings List */}
+                  {stocks.map(s => {
+                     const val = overlayData ? overlayData[s.ticker] : 0;
+                     if(val === undefined) return null;
+                     return (
+                        <div key={s.id} className="flex justify-between gap-4 text-[11px]">
+                           <div className="flex items-center gap-2">
+                              <svg className={`w-2 h-2 shrink-0 rounded-full overflow-hidden ${themeMode === 'hc' ? 'border border-black' : ''}`} viewBox="0 0 8 8">
+                                 <circle cx="4" cy="4" r="4" fill={themeMode === 'hc' ? `url(#${s.patternId})` : s.color} />
+                              </svg>
+                              <span style={{ color: currentTheme.textMuted }}>{s.ticker}</span>
+                           </div>
+                           <FormattedMoney value={val} color={currentTheme.textMain} />
+                        </div>
+                     )
+                  })}
+               </div>
+
+               {/* Scenarios */}
+               {viewMode !== 'growth' && overlayData && (
+                  <div className="mt-3 pt-2 border-t" style={{ borderColor: currentTheme.border }}>
+                     <div className="flex justify-between text-[10px] mb-1">
+                        <span style={{ color: currentTheme.textMuted }}>Downside</span>
+                        <FormattedMoney value={overlayData.TotalDownside || 0} color={currentTheme.textMuted} />
+                     </div>
+                     <div className="flex justify-between text-[10px] mb-1">
+                        <span style={{ color: currentTheme.textMuted }}>3.5% Withdrawal</span>
+                        <FormattedMoney value={overlayData.Income35 || 0} color={currentTheme.textMain} />
+                     </div>
+                     <div className="flex justify-between text-[10px]">
+                        <span style={{ color: currentTheme.textMuted }}>4% Withdrawal</span>
+                        <FormattedMoney value={overlayData.Income40 || 0} color={currentTheme.textMain} />
+                     </div>
+                  </div>
+               )}
+            </div>
+
+            <ResponsiveContainer width="100%" height="100%">
+               <ComposedChart 
+                  key={viewMode} 
+                  data={chartData} 
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  onMouseMove={(e) => {
+                     if (e.activePayload && e.activePayload.length) {
+                        setHoveredChartData(e.activePayload[0].payload);
+                     }
+                  }}
+                  onMouseLeave={() => setHoveredChartData(null)}
+               >
+                 <defs>
+                    {stocks.map(s => (
+                        <linearGradient key={s.id} id={`fill-${s.id}`} x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="0%" stopColor={s.color} stopOpacity={0.3}/>
+                           <stop offset="100%" stopColor={s.color} stopOpacity={0}/>
+                        </linearGradient>
+                    ))}
+                 </defs>
+                 <CartesianGrid stroke={currentTheme.border} strokeDasharray="3 3" vertical={false} opacity={themeMode === 'hc' ? 1 : 0.5} />
+                 <XAxis dataKey="year" tick={{ fontSize: 10, fill: currentTheme.textMuted, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+                 <YAxis 
+                    tick={{ fontSize: 10, fill: currentTheme.textMuted, fontFamily: 'monospace' }} 
+                    axisLine={false} tickLine={false} 
+                    tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`} 
+                    orientation="right" 
+                 />
+                 
+                 <Tooltip 
+                    cursor={{ stroke: currentTheme.textMuted, strokeWidth: 1, strokeDasharray: '4 4' }}
+                    content={() => null}
+                 />
+
+                 <Line 
+                    type="monotone"
+                    dataKey="TotalPrincipal"
+                    stroke={currentTheme.textMuted}
+                    strokeDasharray="2 2"
+                    strokeWidth={1.5}
+                    dot={false}
+                    name="Total Invested"
+                 />
+
+                 {(viewMode === 'growth' || viewMode === 'combined') && stocks.map(s => (
+                    <Area 
+                        key={s.id}
+                        type="monotone" 
+                        dataKey={s.ticker} 
+                        stackId="1" 
+                        stroke={themeMode === 'hc' ? '#000' : s.color} 
+                        fill={themeMode === 'hc' ? `url(#${s.patternId})` : `url(#fill-${s.id})`} 
+                        strokeWidth={themeMode === 'hc' ? 2 : 1.5}
+                        animationDuration={400}
+                    />
+                 ))}
+
+                 {(viewMode === 'risk' || viewMode === 'combined') && (
+                     <>
+                       <Line 
+                          type="monotone"
+                          dataKey="TotalDownside"
+                          stroke={themeMode === 'hc' ? '#000' : currentTheme.accentRed}
+                          strokeDasharray="4 4"
+                          strokeWidth={2}
+                          dot={false}
+                          animationDuration={400}
+                          name="Downside Risk"
+                       />
+                       <Line 
+                          type="monotone"
+                          dataKey="Income35"
+                          stroke={currentTheme.textMuted}
+                          strokeDasharray="2 4"
+                          strokeWidth={1.5}
+                          dot={false}
+                          animationDuration={400}
+                          name="3.5%"
+                       />
+                       <Line 
+                          type="monotone"
+                          dataKey="Income40"
+                          stroke={currentTheme.textMuted}
+                          strokeDasharray="2 4"
+                          strokeWidth={1.5}
+                          dot={false}
+                          animationDuration={400}
+                          name="4%"
+                       />
+                     </>
+                 )}
+               </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Right Resizer */}
+        <div 
+          onMouseDown={() => setIsDraggingRight(true)}
+          className={`w-1 cursor-col-resize transition-colors z-20 flex items-center justify-center group shrink-0 ${isRightCollapsed ? 'hidden' : ''}`}
+          style={{ backgroundColor: currentTheme.bg }}
+        >
+           <GripVertical className="w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: currentTheme.border }} />
+        </div>
+
+        {/* --- RIGHT PANEL: CONTROLS --- */}
+        <div 
+           style={{ 
+             width: isRightCollapsed ? '40px' : `${rightWidth}%`,
+             minWidth: isRightCollapsed ? '40px' : '220px',
+             backgroundColor: currentTheme.bg,
+             borderLeft: `1px solid ${currentTheme.border}`
+           }} 
+           className={`relative flex flex-col h-full overflow-hidden shrink-0 ${!isDraggingRight ? 'transition-all duration-300 ease-in-out' : ''}`}
+        >
+           {/* Collapsed View */}
+           <div 
+             className={`absolute inset-0 w-10 flex flex-col items-center py-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-opacity duration-300 ${isRightCollapsed ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+             onClick={toggleRightPanel}
+             style={{ backgroundColor: currentTheme.bg }}
+           >
+             <SlidersHorizontal className="w-4 h-4 mb-4" style={{ color: currentTheme.textMuted }} />
+             <div className="mt-4 [writing-mode:vertical-lr] text-[10px] font-mono uppercase tracking-wider whitespace-nowrap flex items-center gap-4" style={{ color: currentTheme.textMuted }}>
+               <span className="font-bold" style={{ color: currentTheme.textMain }}>Controls</span>
+             </div>
+             <ChevronLeft className="w-4 h-4 mt-4" style={{ color: currentTheme.textMuted }} />
+           </div>
+
+           {/* Expanded View */}
+           <div className={`flex flex-col h-full w-full transition-opacity duration-300 ${isRightCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+             <div className="h-10 flex items-center justify-between px-4 border-b shrink-0" style={{ borderColor: currentTheme.border }}>
+                <div className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: currentTheme.textMuted }}>Analysis Controls</div>
+                <ChevronRight className="w-3 h-3 hover:text-white cursor-pointer" style={{ color: currentTheme.textMuted }} onClick={toggleRightPanel} />
+             </div>
+
+             <div className="p-5 flex-1 overflow-y-auto min-w-[220px] space-y-6 custom-scrollbar"> 
+                
+                <div>
+                    <animated-icon-selector ref={selectorRef}></animated-icon-selector>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: currentTheme.textMain }}>Time Horizon</label>
+                        <span className="text-xs font-mono" style={{ color: themeMode === 'dark' ? '#fff' : currentTheme.textMain }}>{years}Y</span>
+                    </div>
+                    <input 
+                        type="range" min="1" max="40" step="1"
+                        value={years}
+                        onChange={(e) => setYears(Number(e.target.value))}
+                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
+                        style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: currentTheme.textMain }}>Monthly Add</label>
+                        <span className="text-xs font-mono" style={{ color: themeMode === 'dark' ? '#fff' : currentTheme.textMain }}>{formatMoney(monthlyContrib)}</span>
+                    </div>
+                    <input 
+                        type="range" min="0" max="10000" step="100"
+                        value={monthlyContrib}
+                        onChange={(e) => setMonthlyContrib(Number(e.target.value))}
+                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
+                        style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: currentTheme.textMain }}>Inflation Rate</label>
+                        <span className="text-xs font-mono" style={{ color: themeMode === 'dark' ? '#fff' : currentTheme.textMain }}>{inflationRate}%</span>
+                    </div>
+                    <input 
+                        type="range" min="0" max="15" step="0.5"
+                        value={inflationRate}
+                        onChange={(e) => setInflationRate(Number(e.target.value))}
+                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
+                        style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                   <div className="flex-1">
+                      <div className="flex justify-between items-baseline mb-1">
+                         <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: currentTheme.textMain }}>Upside Adj.</label>
+                         <span className="text-[10px] font-mono" style={{ color: themeMode === 'dark' ? '#fff' : currentTheme.textMain }}>
+                            {upsideFactor > 0 ? '+' : ''}{Math.round(upsideFactor)}%
+                         </span>
+                      </div>
+                      <input 
+                         type="range" min="-100" max="100" step="5"
+                         value={upsideFactor}
+                         onChange={(e) => setUpsideFactor(Number(e.target.value))}
+                         className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
+                         style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                      />
+                   </div>
+                   <div className="flex-1">
+                      <div className="flex justify-between items-baseline mb-1">
+                         <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: currentTheme.textMain }}>Downside Adj.</label>
+                         <span className="text-[10px] font-mono" style={{ color: themeMode === 'dark' ? '#fff' : currentTheme.textMain }}>
+                            {downsideFactor > 0 ? '+' : ''}{Math.round(downsideFactor)}%
+                         </span>
+                      </div>
+                      <input 
+                         type="range" min="-100" max="100" step="5"
+                         value={downsideFactor}
+                         onChange={(e) => setDownsideFactor(Number(e.target.value))}
+                         className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
+                         style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                      />
+                   </div>
+                </div>
+
+                <div className="p-3 border rounded-lg text-[10px] leading-relaxed space-y-2" style={{ backgroundColor: currentTheme.surface, borderColor: currentTheme.border, color: currentTheme.textMuted }}>
+                   <div className="flex gap-2 pt-1 items-start">
+                      <ShieldAlert className="w-3 h-3 shrink-0 mt-0.5" style={{ color: currentTheme.textMuted }} />
+                      <div className="w-full">
+                         <p className="mb-2">Upside and downside based on multipliers for average performance over last 20 years in good and bad years.</p>
+                         
+                         {/* Dynamic Rates Table showing Base Historic Rates */}
+                         {stocks.filter(s => !s.isCash).length > 0 && (
+                            <div className="w-full border-t pt-2" style={{ borderColor: currentTheme.border }}>
+                               {stocks.filter(s => !s.isCash).map(s => {
+                                  return (
+                                    <div key={`risk-${s.id}`} className="grid grid-cols-[1fr_1fr_1fr] text-center font-mono text-[9px] py-0.5">
+                                       <span style={{ color: currentTheme.textMain }} className="text-left">{s.ticker}</span>
+                                       <span style={{ color: themeMode === 'hc' ? '#000' : currentTheme.accentGreen }}>+{s.baseUpside.toFixed(1)}%</span>
+                                       <span style={{ color: themeMode === 'hc' ? '#000' : currentTheme.accentRed }}>{s.baseDownside > 0 ? '+' : ''}{s.baseDownside.toFixed(1)}%</span>
+                                    </div>
+                                  )
+                               })}
+                            </div>
+                         )}
+
+                      </div>
+                   </div>
+                </div>
+
+             </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// --- 6. RENDER ---
+const rootElement = document.getElementById('root');
+const root = createRoot(rootElement);
+root.render(<HighDensityForecaster />);
+    </script>
+</body>
+</html>
