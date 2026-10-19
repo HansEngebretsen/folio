@@ -23,6 +23,12 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.3); border-radius: 4px; }
         .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.5); }
+
+        /* Black & white sliders: flat track, solid black thumb, no outlines */
+        input[type="range"].bw-range { -webkit-appearance: none; appearance: none; background: #d4d4d4; border: none; outline: none; }
+        input[type="range"].bw-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #000; border: none; box-shadow: none; }
+        input[type="range"].bw-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #000; border: none; }
+        input[type="range"].bw-range::-moz-range-track { background: #d4d4d4; border: none; }
     </style>
 
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Ctext x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='%23fff'%3EF%3C/text%3E%3C/svg%3E">
@@ -312,6 +318,38 @@ const INITIAL_STOCKS = [
   { id: '4', ticker: 'TSLA', price: 180, shares: 500, growth: 33.5, defaultGrowth: 33.5, baseUpside: 46.9, baseDownside: -20.1, isCash: false, color: CHART_COLORS[2], patternId: 'pat-2' }, 
 ];
 
+// Sample portfolio for sharing (toggle with "s", or ?data=fake)
+const FAKE_STOCKS = [
+  { id: '1', ticker: 'VTI', price: 285, shares: 400, growth: 14.0, defaultGrowth: 14.0, baseUpside: 21.4, baseDownside: -18.5, isCash: false, patternId: 'pat-1' },
+  { id: '2', ticker: 'VOO', price: 520, shares: 250, growth: 15.3, defaultGrowth: 15.3, baseUpside: 22.0, baseDownside: -15.0, isCash: false, patternId: 'pat-0' },
+  { id: '3', ticker: 'CASH', price: 1, shares: 50000, growth: 0, defaultGrowth: 0, baseUpside: 0, baseDownside: 0, isCash: true, patternId: 'pat-cash' },
+  { id: '4', ticker: 'MSFT', price: 420, shares: 120, growth: 25.0, defaultGrowth: 25.0, baseUpside: 35.0, baseDownside: -15.0, isCash: false, patternId: 'pat-2' },
+  { id: '5', ticker: 'GOOG', price: 170, shares: 200, growth: 19.4, defaultGrowth: 19.4, baseUpside: 27.2, baseDownside: -11.6, isCash: false, patternId: 'pat-3' },
+];
+
+// --- URL PARAMS ---
+// ?theme=dark|light|bw  and  ?data=fake
+const THEME_FROM_PARAM = { dark: 'dark', light: 'light', bw: 'hc', hc: 'hc', mono: 'hc' };
+const THEME_TO_PARAM = { dark: 'dark', light: 'light', hc: 'bw' };
+
+const readUrlParams = () => {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    themeMode: THEME_FROM_PARAM[(params.get('theme') || '').toLowerCase()] || 'dark',
+    isFake: (params.get('data') || '').toLowerCase() === 'fake',
+  };
+};
+
+const writeUrlParams = ({ themeMode, isFake }) => {
+  const params = new URLSearchParams(window.location.search);
+  params.set('theme', THEME_TO_PARAM[themeMode]);
+  if (isFake) params.set('data', 'fake'); else params.delete('data');
+  const query = params.toString();
+  window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+};
+
+const INITIAL_URL_PARAMS = readUrlParams();
+
 // --- 3. HELPERS & COMPONENTS ---
 const FormattedMoney = ({ value, color, className, forceFull = false }) => {
   if (value === undefined || value === null) return null;
@@ -485,7 +523,9 @@ const ScrubInput = ({
 
 // --- 5. MAIN APP ---
 function HighDensityForecaster() {
-  const [themeMode, setThemeMode] = useState('dark');
+  const [themeMode, setThemeMode] = useState(INITIAL_URL_PARAMS.themeMode);
+  const [isFake, setIsFake] = useState(INITIAL_URL_PARAMS.isFake);
+  const realStocksRef = useRef(INITIAL_STOCKS);
   const currentTheme = themeMode === 'dark' ? DARK_THEME : themeMode === 'light' ? LIGHT_THEME : HC_THEME;
   
   const chartColors = useMemo(() => [
@@ -506,7 +546,8 @@ function HighDensityForecaster() {
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
 
-  const [stocks, setStocks] = useState(INITIAL_STOCKS);
+  const [stocks, setStocks] = useState(INITIAL_URL_PARAMS.isFake ? FAKE_STOCKS : INITIAL_STOCKS);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredSlice, setHoveredSlice] = useState(null); 
   const [hoveredChartData, setHoveredChartData] = useState(null);
   
@@ -515,7 +556,7 @@ function HighDensityForecaster() {
       ...s,
       color: s.isCash ? currentTheme.textMuted : chartColors[parseInt(s.id, 10) % chartColors.length] || chartColors[0]
     })));
-  }, [themeMode, chartColors, currentTheme]);
+  }, [themeMode, chartColors, currentTheme, isFake, isLoaded]);
 
   const [years, setYears] = useState(10);
   const [monthlyContrib, setMonthlyContrib] = useState(0); 
@@ -529,7 +570,6 @@ function HighDensityForecaster() {
   const [suggestions, setSuggestions] = useState([]);
 
   // --- CACHING STATES & LOGIC ---
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedState, setLastSavedState] = useState(null);
@@ -547,7 +587,10 @@ function HighDensityForecaster() {
      if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (parsed.stocks) setStocks(parsed.stocks);
+          if (parsed.stocks) {
+            realStocksRef.current = parsed.stocks;
+            if (!INITIAL_URL_PARAMS.isFake) setStocks(parsed.stocks);
+          }
           if (parsed.years !== undefined) setYears(parsed.years);
           if (parsed.monthlyContrib !== undefined) setMonthlyContrib(parsed.monthlyContrib);
           if (parsed.inflationRate !== undefined) setInflationRate(parsed.inflationRate);
@@ -567,7 +610,7 @@ function HighDensityForecaster() {
   }, []);
 
   useEffect(() => {
-     if (!isLoaded || !lastSavedState) return;
+     if (!isLoaded || !lastSavedState || isFake) return;
      
      if (currentStateString !== lastSavedState) {
         if (isAutoSaving) {
@@ -579,7 +622,7 @@ function HighDensityForecaster() {
      } else {
         setHasUnsavedChanges(false);
      }
-  }, [currentStateString, lastSavedState, isAutoSaving, isLoaded]);
+  }, [currentStateString, lastSavedState, isAutoSaving, isLoaded, isFake]);
 
   useEffect(() => {
      const handleBeforeUnload = (e) => {
@@ -593,6 +636,7 @@ function HighDensityForecaster() {
   }, [hasUnsavedChanges, isAutoSaving]);
 
   const saveToCache = () => {
+     if (isFake) return;
      localStorage.setItem('portfolio_forecaster_cache', currentStateString);
      localStorage.setItem('portfolio_forecaster_autosave', 'true');
      setIsAutoSaving(true);
@@ -608,6 +652,34 @@ function HighDensityForecaster() {
      setHasUnsavedChanges(false); 
   };
   // --- END CACHING LOGIC ---
+
+  // --- SAMPLE DATA TOGGLE + URL SYNC ---
+  const toggleFakeData = () => {
+    if (isFake) {
+      setStocks(realStocksRef.current);
+    } else {
+      realStocksRef.current = stocks;
+      setStocks(FAKE_STOCKS);
+    }
+    setIsFake(!isFake);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 's' && e.key !== 'S') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+      e.preventDefault();
+      toggleFakeData();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
+  useEffect(() => {
+    writeUrlParams({ themeMode, isFake });
+  }, [themeMode, isFake]);
 
   const [viewMode, setViewMode] = useState('combined');
   const selectorRef = useRef(null);
@@ -847,6 +919,9 @@ function HighDensityForecaster() {
   }, [stocks]);
   
   const overlayData = hoveredChartData || chartData[chartData.length - 1];
+
+  const sliderClassName = `w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'bw-range' : ''}`;
+  const sliderStyle = themeMode === 'hc' ? undefined : { backgroundColor: currentTheme.surface, accentColor: currentTheme.accentBlue };
 
   return (
     <div className="h-screen w-screen flex flex-col font-sans overflow-hidden" style={{ backgroundColor: currentTheme.bg, color: currentTheme.textMain }}>
@@ -1114,7 +1189,7 @@ function HighDensityForecaster() {
             </div>
 
             {/* CACHE FOOTER */}
-            {(hasUnsavedChanges || isAutoSaving) && (
+            {!isFake && (hasUnsavedChanges || isAutoSaving) && (
               <div className="shrink-0 p-3 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] border-t" style={{ backgroundColor: currentTheme.surface, borderColor: currentTheme.border }}>
                 {(hasUnsavedChanges && !isAutoSaving) && (
                    <button 
@@ -1154,6 +1229,16 @@ function HighDensityForecaster() {
           <div className="h-10 border-b flex items-center justify-between px-4 shrink-0" style={{ borderColor: currentTheme.border }}>
              <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono uppercase" style={{ color: currentTheme.textMuted }}>Projection</span>
+                {isFake && (
+                  <button
+                    onClick={toggleFakeData}
+                    className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
+                    style={{ backgroundColor: currentTheme.surface, color: currentTheme.textMain }}
+                    title="Showing sample data. Press S to switch back."
+                  >
+                    Sample Data
+                  </button>
+                )}
              </div>
              <div className="flex gap-4 items-center">
                 {/* Theme Toggle */}
@@ -1389,8 +1474,8 @@ function HighDensityForecaster() {
                         type="range" min="1" max="40" step="1"
                         value={years}
                         onChange={(e) => setYears(Number(e.target.value))}
-                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
-                        style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                        className={sliderClassName}
+                        style={sliderStyle}
                     />
                   </div>
 
@@ -1403,8 +1488,8 @@ function HighDensityForecaster() {
                         type="range" min="0" max="10000" step="100"
                         value={monthlyContrib}
                         onChange={(e) => setMonthlyContrib(Number(e.target.value))}
-                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
-                        style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                        className={sliderClassName}
+                        style={sliderStyle}
                     />
                   </div>
 
@@ -1417,8 +1502,8 @@ function HighDensityForecaster() {
                         type="range" min="0" max="15" step="0.5"
                         value={inflationRate}
                         onChange={(e) => setInflationRate(Number(e.target.value))}
-                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
-                        style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                        className={sliderClassName}
+                        style={sliderStyle}
                     />
                   </div>
                 </div>
@@ -1435,8 +1520,8 @@ function HighDensityForecaster() {
                          type="range" min="-100" max="100" step="5"
                          value={upsideFactor}
                          onChange={(e) => setUpsideFactor(Number(e.target.value))}
-                         className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
-                         style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                         className={sliderClassName}
+                         style={sliderStyle}
                       />
                    </div>
                    <div className="flex-1">
@@ -1450,8 +1535,8 @@ function HighDensityForecaster() {
                          type="range" min="-100" max="100" step="5"
                          value={downsideFactor}
                          onChange={(e) => setDownsideFactor(Number(e.target.value))}
-                         className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${themeMode === 'hc' ? 'border border-black' : ''}`}
-                         style={{ backgroundColor: themeMode === 'hc' ? '#e5e5e5' : currentTheme.surface, accentColor: themeMode === 'hc' ? '#000' : currentTheme.accentBlue }}
+                         className={sliderClassName}
+                         style={sliderStyle}
                       />
                    </div>
                 </div>
