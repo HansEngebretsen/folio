@@ -1,39 +1,65 @@
-# Portfolio Forecaster
+# `folio`
 
-A high-density, interactive financial projection tool built with React, Recharts, and Tailwind CSS. It allows users to forecast portfolio growth based on historical stock data, customizable monthly contributions, and inflation rates.
+A dense, single-file portfolio forecaster. Drop in your holdings, then drag, scrub and hover to see where they could be in 10, 20 or 40 years.
+
+
+<div align="center">
+  
+[<kbd><br>haaans.com/folio<br><br></kbd>](https://haaans.com/folio/?theme=bw&data=fake)
+
+</div>
+
+
+<p align="center">
+<img src="demos/hero.png" alt="app" width="500">
+</p>
 
 ## Features
 
-- **Interactive Projections:** Visualize portfolio growth over time with a dynamic area chart.
-- **Stock Analysis:** Pre-populated with historical 10-year CAGR data for popular stocks and indices.
-- **Scenario Planning:** Adjust upside and downside factors to see how your portfolio might perform in different market conditions.
-- **Financial Controls:** 
-  - Time Horizon (1-40 years)
-  - Monthly Contributions
-  - Inflation Rate adjustment
-  - Upside/Downside risk multipliers
-- **Real-time Calculations:**
-  - 3.5% and 4% withdrawal rate projections (Safe Withdrawal Rate analysis).
-  - Total principal vs. total projected value.
-- **Interactive UI:**
-  - Resizable panels (Holdings, Chart, Controls).
-  - Dark, Light, and High Contrast themes.
-  - Scrubbable inputs for quick value adjustments.
-  - Interactive pie chart for asset allocation.
-- **Persistence:** Automatically saves your portfolio state to local storage (browser cache).
-
-## Tech Stack
-
-- **Frontend:** React (v18)
-- **Styling:** Tailwind CSS
-- **Charts:** Recharts
-- **Icons:** Lucide React
-- **Runtime:** Single-file HTML application using Babel for in-browser JSX/TSX compilation.
-
-## Getting Started
-
-Simply open `index.html` in any modern web browser. No build step or server is required as all dependencies are loaded via ESM/CDN.
-
-## How it Works
-
-The application calculates future value using standard compound interest formulas, accounting for both initial principal and recurring monthly contributions. Growth rates for stocks are initialized with their 10-year historical averages (where available), while "Cash" positions are adjusted based on the user-defined inflation rate.
+<table>
+<tr valign="top">
+<td width="50%">
+<h3>Drag any number</h3>
+<p>Every value is a scrubber. Drag a position left or right and the shares, the allocation ring and the forecast all move with it. Click a number to type one instead.</p>
+</td>
+<td width="50%">
+<img src="demos/scrub.gif" alt="Drag any number">
+</td>
+</tr>
+<tr valign="top">
+<td width="50%">
+<img src="demos/hover.gif" alt="Hover through time">
+</td>
+<td width="50%">
+<h3>Hover through time</h3>
+<p>Run across the chart and the forecast card follows you year by year: each holding, the downside case and what a 3.5% or 4% withdrawal would pay.</p>
+</td>
+</tr>
+<tr valign="top">
+<td width="50%">
+<h3>Stretch the horizon</h3>
+<p>Slide from 1 to 40 years and watch compounding take over. Monthly contributions, inflation and the upside and downside adjustments sit right beside it.</p>
+</td>
+<td width="50%">
+<img src="demos/horizon.gif" alt="Stretch the horizon">
+</td>
+</tr>
+<tr valign="top">
+<td width="50%">
+<img src="demos/views.gif" alt="Growth, risk, or both">
+</td>
+<td width="50%">
+<h3>Growth, risk, or both</h3>
+<p>Switch between the stacked growth of each holding, the downside and withdrawal lines on their own, or both at once.</p>
+</td>
+</tr>
+<tr valign="top">
+<td width="50%">
+<h3>Share it without sharing it</h3>
+<p>Press <kbd>S</kbd> to swap your holdings for a sample portfolio, and cycle dark, light or black and white. Both live in the URL, so <code>?theme=bw&amp;data=fake</code> is a link you can send anyone.</p>
+</td>
+<td width="50%">
+<img src="demos/themes.gif" alt="Share it without sharing it">
+</td>
+</tr>
+</table>
