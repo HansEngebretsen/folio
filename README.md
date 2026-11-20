@@ -1,6 +1,6 @@
 # `folio`
 
-A single one-page view and forecaster with simple controls for financial portfolios. What do these investments look like? What will they look like in a few years if things go well, and what if they go badly?
+One-page investment forecast based on past performance. What do these investments look like? What will they look like in a few years if things go well, and what if they go badly?
 
 
 <div align="center">
