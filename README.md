@@ -1,6 +1,6 @@
 # `folio`
 
-One-page investment forecast based on past performance. What will they look like in a few years if things go well? What will they look like if things go bad?
+One-page investment forecast based on average past performance. What happens if things go well? What if it gets bad?
 
 
 <div align="center">
@@ -20,7 +20,7 @@ One-page investment forecast based on past performance. What will they look like
 <tr valign="top">
 <td width="50%">
 <h3>Quick controls</h3>
-<p>Drag by price or amount and auto-import previous history.</p>
+<p>Drag by price or amount and use previous performance or worst/best years as a baseline.</p>
 </td>
 <td width="50%">
 <img src="demos/scrub.gif" alt="Quick controls">
@@ -38,7 +38,7 @@ One-page investment forecast based on past performance. What will they look like
 <tr valign="top">
 <td width="50%">
 <h3>Growth or risk over time</h3>
-<p>Watch compounding take over, for ideal scenarios and for less-than-ideal ones.</p>
+<p>Watch compounding take over, for ideal scenarios and base risk on previous bad years.</p>
 </td>
 <td width="50%">
 <img src="demos/horizon.gif" alt="Growth or risk over time">
