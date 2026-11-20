@@ -1,6 +1,6 @@
 # `folio`
 
-A dense, single-file portfolio forecaster. Drop in your holdings, then drag, scrub and hover to see where they could be in 10, 20 or 40 years.
+A single one-page view and forecaster with simple controls for financial portfolios. What do these investments look like? What will they look like in a few years if things go well, and what if they go badly?
 
 
 <div align="center">
@@ -19,11 +19,11 @@ A dense, single-file portfolio forecaster. Drop in your holdings, then drag, scr
 <table>
 <tr valign="top">
 <td width="50%">
-<h3>Drag any number</h3>
-<p>Every value is a scrubber. Drag a position left or right and the shares, the allocation ring and the forecast all move with it. Click a number to type one instead.</p>
+<h3>Quick controls</h3>
+<p>Easily set distributions with quick controls and percentages, including defaults and stock prices.</p>
 </td>
 <td width="50%">
-<img src="demos/scrub.gif" alt="Drag any number">
+<img src="demos/scrub.gif" alt="Quick controls">
 </td>
 </tr>
 <tr valign="top">
@@ -37,29 +37,20 @@ A dense, single-file portfolio forecaster. Drop in your holdings, then drag, scr
 </tr>
 <tr valign="top">
 <td width="50%">
-<h3>Stretch the horizon</h3>
-<p>Slide from 1 to 40 years and watch compounding take over. Monthly contributions, inflation and the upside and downside adjustments sit right beside it.</p>
+<h3>Growth or risk over time</h3>
+<p>Watch compounding take over, for ideal scenarios and for less-than-ideal ones.</p>
 </td>
 <td width="50%">
-<img src="demos/horizon.gif" alt="Stretch the horizon">
-</td>
-</tr>
-<tr valign="top">
-<td width="50%">
-<img src="demos/views.gif" alt="Growth, risk, or both">
-</td>
-<td width="50%">
-<h3>Growth, risk, or both</h3>
-<p>Switch between the stacked growth of each holding, the downside and withdrawal lines on their own, or both at once.</p>
+<img src="demos/horizon.gif" alt="Growth or risk over time">
 </td>
 </tr>
 <tr valign="top">
 <td width="50%">
-<h3>Share it without sharing it</h3>
-<p>Press <kbd>S</kbd> to swap your holdings for a sample portfolio, and cycle dark, light or black and white. Both live in the URL, so <code>?theme=bw&amp;data=fake</code> is a link you can send anyone.</p>
+<img src="demos/themes.gif" alt="No database">
 </td>
 <td width="50%">
-<img src="demos/themes.gif" alt="Share it without sharing it">
+<h3>No database</h3>
+<p>Stores in local memory, so none of the data is stored anywhere outside of your own browser.</p>
 </td>
 </tr>
 </table>
