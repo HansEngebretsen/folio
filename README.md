@@ -1,6 +1,6 @@
 # `folio`
 
-One-page investment forecast based on past performance. What do these investments look like? What will they look like in a few years if things go well, and what if they go badly?
+One-page investment forecast based on past performance. What will they look like in a few years if things go well? What will they look like if things go bad?
 
 
 <div align="center">
@@ -20,7 +20,7 @@ One-page investment forecast based on past performance. What do these investment
 <tr valign="top">
 <td width="50%">
 <h3>Quick controls</h3>
-<p>Easily set distributions with quick controls and percentages, including defaults and stock prices.</p>
+<p>Drag by price or amount and auto-import previous history.</p>
 </td>
 <td width="50%">
 <img src="demos/scrub.gif" alt="Quick controls">
